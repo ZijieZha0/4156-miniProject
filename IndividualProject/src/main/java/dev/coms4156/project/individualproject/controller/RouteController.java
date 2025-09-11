@@ -80,15 +80,16 @@ public class RouteController {
   public ResponseEntity<?> addCopy(@PathVariable Integer bookId) {
     try {
       for (BOOK book : mockApiService.getBooks()) {
-        StringBuilder currBookId = new StringBuilder(book.getId());
         if (bookId.equals(book.getId())) {
           book.addCopy();
           return new ResponseEntity<>(book, HttpStatus.OK);
         }
       }
-
-      return new ResponseEntity<>("Book not found.", HttpStatus.I_AM_A_TEAPOT);
+      return new ResponseEntity<>("Book not found.", HttpStatus.NOT_FOUND);
     } catch (Exception e) {
+      System.err.println(e);
+      return new ResponseEntity<>("Error occurred when adding a copy",
+          HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

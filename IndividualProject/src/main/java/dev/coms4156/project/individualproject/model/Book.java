@@ -7,7 +7,7 @@ import java.util.ArrayList;
 /**
  * This class defines the Book entry model.
  */
-public class BOOK implements Comparable<BOOK> {
+public class Book implements Comparable<Book> {
   private String title;
   private ArrayList<String> authors;
   private String language;
@@ -25,10 +25,10 @@ public class BOOK implements Comparable<BOOK> {
   /**
    * Very basic Book constructor.
    *
-   * @param title The title of the book.
-   * @param id The id of the book.
+   * @param title the title of the book.
+   * @param id the id of the book.
    */
-  public BOOK(String title, int id) {
+  public Book(String title, int id) {
     this.title = title;
     this.id = id;
     this.authors = new ArrayList<>();
@@ -57,9 +57,9 @@ public class BOOK implements Comparable<BOOK> {
    * @param copiesAvailable number of copies available of the book.
    * @param totalCopies number of available and checked-out copies of the book.
    */
-  public BOOK(String title, ArrayList<String> authors, String language, String shelvingLocation,
-              String publicationDate, String publisher, ArrayList<String> subjects,
-              int id, int copiesAvailable, int totalCopies) {
+  public Book(String title, ArrayList<String> authors, String language, String shelvingLocation,
+      String publicationDate, String publisher, ArrayList<String> subjects, int id,
+      int copiesAvailable, int totalCopies) {
     this.title = title;
     this.authors = authors;
     this.language = language;
@@ -77,7 +77,7 @@ public class BOOK implements Comparable<BOOK> {
   /**
    * No args constructor for Jackson.
    */
-  public BOOK() {
+  public Book() {
     this.authors = new ArrayList<>();
     this.subjects = new ArrayList<>();
     this.returnDates = new ArrayList<>();
@@ -103,10 +103,8 @@ public class BOOK implements Comparable<BOOK> {
   /**
    * Deletes a single copy of the book if at least one copy exists and is available.
    *
-   * @return {@code true} if a copy was successfully deleted; {@code false} if no copies
-   *         are available or exist to delete.
+   * @return {@code true} if a copy was successfully deleted; {@code false} otherwise.
    */
-
   public boolean deleteCopy() {
     if (totalCopies > 0 && copiesAvailable > 0) {
       totalCopies--;
@@ -117,16 +115,14 @@ public class BOOK implements Comparable<BOOK> {
   }
 
   public void addCopy() {
-
+    // intentionally left as-is for Step 3.
   }
 
   /**
    * Checks out a copy of the book if available and generates a due date two weeks from today.
    *
-   * @return A {@code String} representing the due date if the checkout is successful;
-   *         otherwise, {@code null} if no copies are available.
+   * @return a {@code String} due date if the checkout is successful; otherwise {@code null}.
    */
-
   public String checkoutCopy() {
     if (copiesAvailable > 0) {
       copiesAvailable--;
@@ -137,14 +133,13 @@ public class BOOK implements Comparable<BOOK> {
       returnDates.add(dueDateStr);
       return dueDateStr;
     }
-
     return null;
   }
 
   /**
    * Returns a previously checked-out copy of the book corresponding to the given due date.
    *
-   * @param date A {@code String} representing the due date of the book being returned.
+   * @param date a {@code String} representing the due date of the book being returned.
    * @return {@code true} if the return was successful and a matching date was removed;
    *         {@code false} if no matching due date is found.
    */
@@ -158,10 +153,8 @@ public class BOOK implements Comparable<BOOK> {
         }
       }
     }
-
     return false;
   }
-
 
   public String getTitle() {
     return title;
@@ -252,7 +245,7 @@ public class BOOK implements Comparable<BOOK> {
   }
 
   @Override
-  public int compareTo(BOOK other) {
+  public int compareTo(Book other) {
     return Integer.compare(this.id, other.id);
   }
 
@@ -261,12 +254,10 @@ public class BOOK implements Comparable<BOOK> {
     if (this == obj) {
       return true;
     }
-
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-
-    BOOK cmpBook = (BOOK)obj;
+    Book cmpBook = (Book) obj; // note the space after cast for Checkstyle
     return cmpBook.id == this.id;
   }
 
@@ -275,4 +266,3 @@ public class BOOK implements Comparable<BOOK> {
     return String.format("(%d)\t%s", this.id, this.title);
   }
 }
-

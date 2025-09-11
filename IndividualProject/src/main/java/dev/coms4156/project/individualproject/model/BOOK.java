@@ -180,6 +180,7 @@ public class BOOK implements Comparable<BOOK> {
   }
 
   public String getLanguage() {
+    return language;
   }
 
   public void setLanguage(String language) {
@@ -265,7 +266,7 @@ public class BOOK implements Comparable<BOOK> {
       return false;
     }
 
-    BOOK cmpBook = obj;
+    BOOK cmpBook = (BOOK)obj;
     return cmpBook.id == this.id;
   }
 

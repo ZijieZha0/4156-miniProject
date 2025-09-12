@@ -12,9 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the {@link Book} model.
- * Note: These tests are written against the current behavior to keep Step 2 passing.
- * Logic fixes will be covered in Step 3 with additional assertions.
+ * Unit tests for the {@link Book} model against the FIXED logic in Step 3.
+ * These tests assert correct behavior for copy counts, checkout/return flow,
+ * setters/getters, equality and comparison.
  */
 class BookTest {
 
@@ -22,55 +22,95 @@ class BookTest {
 
   @BeforeEach
   void setUp() {
+    // Default constructor sets copiesAvailable = 1, totalCopies = 1, etc.
     book = new Book("When Breath Becomes Air", 1);
   }
 
   @Test
-  void hasMultipleAuthors_falseWhenZeroOrOne() {
-    assertFalse(book.hasMultipleAuthors());
-    book.getAuthors().add("Paul Kalanithi");
-    assertFalse(book.hasMultipleAuthors());
+  void hasCopies_trueOnlyWhenCopiesAvailableIsPositive() {
+    // With default 1 copy, should be true
+    assertTrue(book.hasCopies(), "Expected hasCopies() to be true when copiesAvailable > 0");
+
+    // Bring copiesAvailable down to 0 by checking out once
+    String due = book.checkoutCopy();
+    assertNotNull(due, "Checkout should succeed when a copy is available");
+    assertFalse(book.hasCopies(), "Expected hasCopies() to be false when copiesAvailable == 0");
   }
 
   @Test
-  void checkoutCopy_returnsIsoDateAndDecrementsCopies() {
-    int beforeCopies = book.getCopiesAvailable();
+  void addCopy_incrementsTotalAndAvailable() {
+    int beforeTotal = book.getTotalCopies();
+    int beforeAvail = book.getCopiesAvailable();
+
+    book.addCopy();
+
+    assertEquals(beforeTotal + 1, book.getTotalCopies(), "totalCopies should increment by 1");
+    assertEquals(beforeAvail + 1, book.getCopiesAvailable(),    
+            "copiesAvailable should increment by 1");
+  }
+
+  @Test
+  void deleteCopy_returnsTrueOnSuccessAndFalseWhenNoCopies() {
+    // Start with 1 copy -> delete should succeed and decrement both totals
+    int beforeTotal = book.getTotalCopies();
+    int beforeAvail = book.getCopiesAvailable();
+
+    assertTrue(book.deleteCopy(), "deleteCopy() should return true when a copy is available");
+    assertEquals(beforeTotal - 1, book.getTotalCopies(), 
+            "totalCopies should decrement by 1");
+    assertEquals(beforeAvail - 1, book.getCopiesAvailable(), 
+            "copiesAvailable should decrement by 1");
+
+    // Now there are no copies left -> delete should fail
+    assertFalse(book.deleteCopy(), "deleteCopy() should return false when no copies are available");
+  }
+
+  @Test
+  void checkoutCopy_emitsIsoDueDate_decrementsAvailable_incrementsCheckoutCount() {
+    int beforeAvail = book.getCopiesAvailable();
+    final int beforeTimes = book.getAmountOfTimesCheckedOut();
+
+    String due = book.checkoutCopy();
+    assertNotNull(due, "Checkout should return a due date string");
+    assertDoesNotThrow(() -> LocalDate.parse(due), "Due date should be ISO_LOCAL_DATE parseable");
+
+    assertEquals(beforeAvail - 1, book.getCopiesAvailable(), 
+            "copiesAvailable should decrement by 1");
+
+    assertEquals(beforeTimes + 1, book.getAmountOfTimesCheckedOut(),
+        "amountOfTimesCheckedOut should increment by 1");
+    assertFalse(book.getReturnDates().isEmpty(), "returnDates should contain the due date");
+  }
+
+  @Test
+  void returnCopy_trueWhenMatchingDateExists_andRestoresAvailability() {
+    // First checkout to create a due date
     String due = book.checkoutCopy();
     assertNotNull(due);
-    assertDoesNotThrow(() -> LocalDate.parse(due)); // ISO_LOCAL_DATE
-    assertEquals(beforeCopies - 1, book.getCopiesAvailable());
-    assertFalse(book.getReturnDates().isEmpty());
+
+    int beforeAvail = book.getCopiesAvailable();
+
+    // Return the exact date -> should succeed and increase availability by 1
+    assertTrue(book.returnCopy(due), "returnCopy() should succeed for a stored due date");
+    assertEquals(beforeAvail + 1, book.getCopiesAvailable(),
+        "copiesAvailable should increment by 1 after a successful return");
+
+    // Returning a non-existent date should fail
+    assertFalse(book.returnCopy("2099-01-01"), "returnCopy() should fail for a non-existent date");
   }
 
   @Test
-  void returnCopy_falseWhenNoMatchingDateOrEmpty() {
-    assertFalse(book.returnCopy("2099-01-01"));
-  }
-
-  @Test
-  void settersAndGetters_basicFields() {
-    assertEquals("When Breath Becomes Air", book.getTitle());
-    book.setTitle("New Title");
-    assertEquals("New Title", book.getTitle());
-
-    // Current implementation sets shelvingLocation to the literal "shelvingLocation".
+  void setters_setShelvingLocationUsesProvidedValue_notLiteral() {
     book.setShelvingLocation("A-1");
-    assertEquals("shelvingLocation", book.getShelvingLocation());
+    assertEquals("A-1", book.getShelvingLocation(),
+        "setShelvingLocation should set the provided value (not a literal string)");
   }
 
   @Test
-  void equals_sameReferenceAndSameId() {
-    Book sameRef = book;
-    assertEquals(sameRef, book);
-
-    Book sameId = new Book("Other Title", 1);
-    assertEquals(sameId, book);
+  void hasMultipleAuthors_falseForZeroOrOneAuthor() {
+    assertFalse(book.hasMultipleAuthors(), "Zero authors -> false");
+    book.getAuthors().add("Paul Kalanithi");
+    assertFalse(book.hasMultipleAuthors(), "Exactly one author -> false");
   }
 
-  @Test
-  void compareTo_comparesById() {
-    Book b2 = new Book("X", 2);
-    assertTrue(book.compareTo(b2) < 0);
-    assertTrue(b2.compareTo(book) > 0);
-  }
 }

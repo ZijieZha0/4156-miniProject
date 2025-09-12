@@ -10,8 +10,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class IndividualProjectApplication {
 
-  public static void main(String[] args) {
+  /**
+   * Application bootstrap.
+   *
+   * @param args command line arguments
+   */
+  public static void main(final String[] args) {
     SpringApplication.run(IndividualProjectApplication.class, args);
   }
-
 }

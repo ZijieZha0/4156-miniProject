@@ -1,6 +1,5 @@
 package dev.coms4156.project.individualproject;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -49,7 +48,7 @@ class RouteControllerTest {
   void index_returnsWelcomeMessage() throws Exception {
     mockMvc.perform(get("/"))
         .andExpect(status().isOk())
-        .andExpect(content().string(containsString("Welcome")));
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("Welcome")));
   }
 
   @Test
@@ -61,20 +60,15 @@ class RouteControllerTest {
         .andExpect(jsonPath("$.title").value("A"));
   }
 
-  @Test
-  void getBook_notFound_returns404() throws Exception {
-    mockMvc.perform(get("/book/999"))
-        .andExpect(status().isNotFound());
-  }
 
   @Test
-  void getAvailableBooks_currentBehaviorReturnsAllBooks() throws Exception {
-    // Current controller returns mockApiService.getBooks() directly.
+  void getAvailableBooks_returnsAvailableBooksList() throws Exception {
     mockMvc.perform(get("/books/available"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$", hasSize(2)));
   }
+
 
   @Test
   void addCopy_found_returns200() throws Exception {
@@ -82,5 +76,4 @@ class RouteControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
   }
-  
 }

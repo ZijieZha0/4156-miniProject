@@ -91,6 +91,38 @@
 					</execution>
 				</executions>
 			</plugin>
+
+			<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-pmd-plugin</artifactId>
+			<version>3.22.0</version>
+			<configuration>
+
+				<targetJdk>17</targetJdk>
+				<rulesets>
+				<ruleset>category/java/bestpractices.xml</ruleset>
+				<ruleset>category/java/errorprone.xml</ruleset>
+				<ruleset>category/java/codestyle.xml</ruleset>
+				<ruleset>category/java/performance.xml</ruleset>
+				<ruleset>category/java/documentation.xml</ruleset>
+				</rulesets>
+
+				<linkXref>false</linkXref>
+				<printFailingErrors>true</printFailingErrors>
+				<failOnViolation>false</failOnViolation> 
+			</configuration>
+
+			<executions>
+				<execution>
+				<id>pmd</id>
+				<phase>none</phase>
+				<goals>
+					<goal>pmd</goal>
+					<goal>cpd</goal> 
+				</goals>
+				</execution>
+			</executions>
+			</plugin>
 		</plugins>
 	</build>
 

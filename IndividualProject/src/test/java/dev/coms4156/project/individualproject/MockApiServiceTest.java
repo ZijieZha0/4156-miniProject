@@ -7,11 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import dev.coms4156.project.individualproject.model.Book;
 import dev.coms4156.project.individualproject.service.MockApiService;
 import java.util.ArrayList;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link MockApiService}.
- * These tests assert stability based on current behavior; functional fixes will be added in Step 3.
+ * Now asserts the functional fix of updateBook (B-005).
  */
 class MockApiServiceTest {
 
@@ -22,21 +23,31 @@ class MockApiServiceTest {
   }
 
   @Test
-  void updateBook_doesNotThrow_andSizeUnchangedPerCurrentBehavior() {
+  void updateBook_replacesMatchingBook_afterFix() {
     MockApiService svc = new MockApiService();
     ArrayList<Book> before = new ArrayList<>(svc.getBooks());
+    assertNotNull(before);
 
-    assertDoesNotThrow(() -> {
-      if (!before.isEmpty()) {
-        Book orig = before.get(0);
-        Book updated = new Book(orig.getTitle() + " (Updated)", orig.getId());
-        svc.updateBook(updated);
-      } else {
-        svc.updateBook(new Book("X", 1));
-      }
-    });
+    if (before.isEmpty()) {
+      // If no data (unlikely with provided mock json), create a book and verify size behavior.
+      Book seed = new Book("Seed", 1);
+      assertDoesNotThrow(() -> svc.updateBook(seed));
+      assertEquals(0, svc.getBooks().size(), "Without a matching id, size should remain unchanged");
+      return;
+    }
 
-    // Current implementation keeps the same list reference and size.
-    assertEquals(before.size(), svc.getBooks().size());
+    // Pick the first book and "update" it with same id but modified title.
+    Book orig = before.get(0);
+    String updatedTitle = orig.getTitle() + " (Updated)";
+    Book updated = new Book(updatedTitle, orig.getId());
+
+    assertDoesNotThrow(() -> svc.updateBook(updated));
+
+    Optional<Book> found =
+        svc.getBooks().stream().filter(b -> b.getId() == orig.getId()).findFirst();
+    assertNotNull(found.orElse(null), "Updated book with same id should exist");
+    assertEquals(updatedTitle, found.get().getTitle(), "Title should be replaced after update");
+ 
+    assertEquals(before.size(), svc.getBooks().size(), "Size should not change on in-place update");
   }
 }

@@ -155,4 +155,55 @@ class RouteControllerTest {
     mockMvc.perform(get("/books/recommendation"))
         .andExpect(status().isBadRequest());
   }
+
+  /**
+   * Checkout succeeds when a copy is available.
+   */
+  @Test
+  void checkout_success_returns200AndUpdatedBook() throws Exception {
+    // Book with one available copy (default)
+    Book book = new Book("C", 3);
+    List<Book> list = new ArrayList<>();
+    list.add(book);
+    Mockito.when(mockApiService.getBooks()).thenReturn(list);
+
+    mockMvc.perform(patch("/checkout").param("id", "3"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.id").value(3))
+        .andExpect(jsonPath("$.copiesAvailable").value(0))
+        .andExpect(jsonPath("$.amountOfTimesCheckedOut").value(1));
+
+    Mockito.verify(mockApiService).updateBook(Mockito.argThat(b -> b.getId() == 3));
+  }
+
+  /**
+   * Checkout returns 400 when no copies are available.
+   */
+  @Test
+  void checkout_noCopies_returns400() throws Exception {
+    Book book = new Book("D", 4);
+    // Bring copiesAvailable down to 0
+    book.deleteCopy(); // now totalCopies=0, copiesAvailable=0
+
+    List<Book> list = new ArrayList<>();
+    list.add(book);
+    Mockito.when(mockApiService.getBooks()).thenReturn(list);
+
+    mockMvc.perform(patch("/checkout").param("id", "4"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("No copies available")));
+  }
+
+  /**
+   * Checkout returns 404 when the book does not exist.
+   */
+  @Test
+  void checkout_notFound_returns404() throws Exception {
+    Mockito.when(mockApiService.getBooks()).thenReturn(new ArrayList<>());
+
+    mockMvc.perform(patch("/checkout").param("id", "999"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("Book not found")));
+  }
 }

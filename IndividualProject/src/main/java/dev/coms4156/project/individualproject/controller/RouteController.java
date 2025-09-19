@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -159,6 +160,44 @@ public class RouteController {
       result = new ResponseEntity<>(
           "Error occurred while generating recommendations.",
           HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return result;
+  }
+
+  /**
+   * Checks out a book by id using {@link Book#checkoutCopy()} to update its state.
+   *
+   * @param id book id (request parameter)
+   * @return 200 with updated book; 400 if no copies; 404 if not found; 500 on error
+   */
+  @SuppressWarnings("PMD.ShortVariable")
+  @PatchMapping("/checkout")
+  public ResponseEntity<?> checkout(@RequestParam("id") final int id) {
+    ResponseEntity<?> result;
+    try {
+      Book target = null;
+      for (final Book b : mockApiService.getBooks()) {
+        if (b.getId() == id) {
+          target = b;
+          break;
+        }
+      }
+
+      if (target == null) {
+        result = new ResponseEntity<>("Book not found.", HttpStatus.NOT_FOUND);
+      } else {
+        // Updates copiesAvailable, amountOfTimesCheckedOut, and returnDates.
+        final String due = target.checkoutCopy();
+        if (due == null) {
+          result = new ResponseEntity<>("No copies available.", HttpStatus.BAD_REQUEST);
+        } else {
+          mockApiService.updateBook(target); // persist change in service catalogue
+          result = new ResponseEntity<>(target, HttpStatus.OK);
+        }
+      }
+    } catch (final Exception e) {
+      LOG.error("Error during checkout", e);
+      result = new ResponseEntity<>("Error during checkout.", HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return result;
   }

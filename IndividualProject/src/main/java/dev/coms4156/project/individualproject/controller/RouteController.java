@@ -3,6 +3,8 @@ package dev.coms4156.project.individualproject.controller;
 import dev.coms4156.project.individualproject.model.Book;
 import dev.coms4156.project.individualproject.service.MockApiService;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;      
@@ -111,6 +113,51 @@ public class RouteController {
       LOG.error("Error occurred when adding a copy", e); 
       result = new ResponseEntity<>(
           "Error occurred when adding a copy",
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return result;
+  }
+
+  /**
+   * Builds and returns 10 book recommendations.
+   * Five are most popular by checkout count; five are random unique picks.
+   * Returns 400 if the catalogue has fewer than 10 books.
+   *
+   * @return HTTP 200 with 10 books, or an error status on failure
+   */
+  @GetMapping({"/books/recommendation"})
+  public ResponseEntity<?> getRecommendations() {
+    ResponseEntity<?> result;
+    try {
+      final List<Book> all = mockApiService.getBooks();
+      if (all == null || all.size() < 10) {
+        result = new ResponseEntity<>(
+            "Not enough books to generate 10 recommendations.",
+            HttpStatus.BAD_REQUEST);
+      } else {
+        // Top 5 by popularity
+        final List<Book> sorted = new ArrayList<>(all);
+        sorted.sort(Comparator.comparingInt(Book::getAmountOfTimesCheckedOut).reversed());
+        final int topCount = Math.min(5, sorted.size());
+        final List<Book> topPopular = new ArrayList<>(sorted.subList(0, topCount));
+
+        // Random 5 from the remaining pool
+        final List<Book> remaining = new ArrayList<>(all);
+        remaining.removeAll(topPopular);
+        Collections.shuffle(remaining);
+        final int randomCount = 10 - topCount; // normally 5
+        final List<Book> randomPicks = new ArrayList<>(remaining.subList(0, randomCount));
+
+        final List<Book> recommendations = new ArrayList<>(10);
+        recommendations.addAll(topPopular);
+        recommendations.addAll(randomPicks);
+
+        result = new ResponseEntity<>(recommendations, HttpStatus.OK);
+      }
+    } catch (final Exception e) {
+      LOG.error("Failed to build recommendations", e);
+      result = new ResponseEntity<>(
+          "Error occurred while generating recommendations.",
           HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return result;

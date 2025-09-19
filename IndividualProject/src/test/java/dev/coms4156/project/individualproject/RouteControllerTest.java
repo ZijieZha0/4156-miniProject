@@ -1,43 +1,59 @@
 package dev.coms4156.project.individualproject;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.coms4156.project.individualproject.controller.RouteController;
 import dev.coms4156.project.individualproject.model.Book;
 import dev.coms4156.project.individualproject.service.MockApiService;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List; 
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.mockito.Mockito; 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest; 
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
+import org.springframework.http.MediaType; 
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * MVC tests for the RouteController endpoints.
- * We use @WebMvcTest to focus on controller behavior and mock the service layer.
+ * MVC tests for {@link RouteController}.
+ *
+ * <p>These tests focus on controller behavior using {@code @WebMvcTest}, while the service layer
+ * is mocked via {@code @MockBean}.
  */
-@WebMvcTest
+@WebMvcTest(RouteController.class)
 class RouteControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+  @Autowired
+  private MockMvc mockMvc;
 
-  @MockBean private MockApiService mockApiService;
+  @MockBean
+  private MockApiService mockApiService;
 
   private List<Book> books;
 
   @BeforeEach
   void setUp() {
+    // Default stub: small catalogue for basic endpoints.
     books = new ArrayList<>();
-    Book b1 = new Book("A", 1);
-    Book b2 = new Book("B", 2);
+    final Book b1 = new Book("A", 1);
+    final Book b2 = new Book("B", 2);
     books.add(b1);
     books.add(b2);
 
@@ -48,7 +64,7 @@ class RouteControllerTest {
   void index_returnsWelcomeMessage() throws Exception {
     mockMvc.perform(get("/"))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("Welcome")));
+        .andExpect(content().string(containsString("Welcome")));
   }
 
   @Test
@@ -60,7 +76,6 @@ class RouteControllerTest {
         .andExpect(jsonPath("$.title").value("A"));
   }
 
-
   @Test
   void getAvailableBooks_returnsAvailableBooksList() throws Exception {
     mockMvc.perform(get("/books/available"))
@@ -69,11 +84,75 @@ class RouteControllerTest {
         .andExpect(jsonPath("$", hasSize(2)));
   }
 
-
   @Test
   void addCopy_found_returns200() throws Exception {
     mockMvc.perform(patch("/book/1/add"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+  }
+
+  /**
+   * Happy path for /books/recommendation.
+   * - Returns exactly 10 unique books
+   * - Must include the top-5 most popular (by amountOfTimesCheckedOut)
+   */
+  @Test
+  void getRecommendations_returns10_unique_andContainsTop5() throws Exception {
+    // Build a catalogue of 12 books with popularity increasing by id.
+    final List<Book> catalogue = new ArrayList<>();
+    for (int i = 1; i <= 12; i++) {
+      final Book b = new Book("B" + i, i);
+      // Increase checkout count i times; return immediately to restore availability.
+      for (int k = 0; k < i; k++) {
+        final String due = b.checkoutCopy();
+        if (due != null) {
+          b.returnCopy(due);
+        }
+      }
+      catalogue.add(b);
+    }
+    Mockito.when(mockApiService.getBooks()).thenReturn(catalogue);
+
+    final String body = mockMvc.perform(get("/books/recommendation"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    final ObjectMapper om = new ObjectMapper();
+    final List<Map<String, Object>> arr =
+        om.readValue(body, new TypeReference<List<Map<String, Object>>>() {});
+
+    // 1) Exactly 10
+    assertEquals(10, arr.size(), "should return exactly 10 books");
+
+    // 2) All unique (by id)
+    final Set<Integer> ids = arr.stream()
+        .map(m -> (Integer) m.get("id"))
+        .collect(Collectors.toSet());
+    assertEquals(10, ids.size(), "all recommended books must be unique");
+
+    // 3) Top-5 popular are ids {12,11,10,9,8}
+    final Set<Integer> expectedTop5 = new HashSet<>(Arrays.asList(12, 11, 10, 9, 8));
+    assertTrue(ids.containsAll(expectedTop5),
+        "recommendations must include top-5 popular books");
+  }
+
+  /**
+   * Error path for /books/recommendation:
+   * - When there are fewer than 10 books, respond with 400 Bad Request.
+   */
+  @Test
+  void getRecommendations_returns400_whenLessThan10Books() throws Exception {
+    final List<Book> few = Arrays.asList(
+        new Book("A", 1),
+        new Book("B", 2),
+        new Book("C", 3)
+    );
+    Mockito.when(mockApiService.getBooks()).thenReturn(few);
+
+    mockMvc.perform(get("/books/recommendation"))
+        .andExpect(status().isBadRequest());
   }
 }

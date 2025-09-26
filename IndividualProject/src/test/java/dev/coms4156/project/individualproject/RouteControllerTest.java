@@ -206,4 +206,58 @@ class RouteControllerTest {
         .andExpect(status().isNotFound())
         .andExpect(content().string(org.hamcrest.Matchers.containsString("Book not found")));
   }
+
+  /** getBook returns 404 when not found. */
+  @Test
+  void getBook_notFound_returns404() throws Exception {
+    mockMvc.perform(get("/book/999"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(containsString("Book not found")));
+  }
+
+  /** addCopy returns 404 when book is not found. */
+  @Test
+  void addCopy_notFound_returns404() throws Exception {
+    mockMvc.perform(patch("/book/999/add"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(containsString("Book not found")));
+  }
+
+  /** addCopy returns 500 when the service throws an exception. */
+  @Test
+  void addCopy_exception_returns500() throws Exception {
+    Mockito.when(mockApiService.getBooks()).thenThrow(new RuntimeException("oops"));
+    mockMvc.perform(patch("/book/1/add"))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().string(containsString("Error occurred when adding a copy")));
+  }
+
+  /** available-books endpoint returns 500 when the service throws. */
+  @Test
+  void getAvailableBooks_exception_returns500() throws Exception {
+    Mockito.when(mockApiService.getBooks()).thenThrow(new RuntimeException("boom"));
+    mockMvc.perform(get("/books/available"))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().string(containsString(
+        "Error occurred when getting all available books")));
+  }
+
+  /** recommendation endpoint returns 500 when the service throws. */
+  @Test
+  void recommendation_exception_returns500() throws Exception {
+    Mockito.when(mockApiService.getBooks()).thenThrow(new RuntimeException("kaboom"));
+    mockMvc.perform(get("/books/recommendation"))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().string(containsString(
+        "Error occurred while generating recommendations.")));
+  }
+
+  /** checkout returns 500 when the service throws. */
+  @Test
+  void checkout_exception_returns500() throws Exception {
+    Mockito.when(mockApiService.getBooks()).thenThrow(new RuntimeException("fail"));
+    mockMvc.perform(patch("/checkout").param("id", "1"))
+        .andExpect(status().isInternalServerError())
+        .andExpect(content().string(containsString("Error during checkout.")));
+  }
 }

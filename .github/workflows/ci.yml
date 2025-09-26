@@ -2,13 +2,18 @@ name: CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]      # run on any branch
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]    # and on PRs to main
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
+
+    # All `run:` steps below will execute inside IndividualProject/
+    defaults:
+      run:
+        working-directory: IndividualProject
 
     steps:
       - name: Checkout
@@ -25,18 +30,19 @@ jobs:
         run: mvn -B -ntp clean verify
 
       - name: PMD analysis
-        run: mvn -B -ntp pmd:pmd
+        # If PMD isn't bound to lifecycle, run it explicitly
+        run: mvn -B -ntp -DskipTests=true pmd:pmd
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
-          path: target/surefire-reports
+          path: IndividualProject/target/surefire-reports
 
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
-          path: target/site/jacoco
+          path: IndividualProject/target/site/jacoco
